@@ -1,0 +1,109 @@
+#!/bin/bash
+
+BUILD_TYPE=Release
+
+MACHINE_ID=`uname -n`
+
+echo Configuring fusion_io for machine $MACHINE_ID
+echo
+
+if [ $# -eq 1 ]
+then
+    BUILD_TYPE=Debug
+fi
+
+echo cmake configured to generate a $BUILD_TYPE build.
+if [ "$BUILD_TYPE" == Debug ]
+then
+	echo cmake may be reconfigured to generate a Release build by running this with no arguments or using the command
+	echo
+	echo cmake -DCMAKE_BUILD_TYPE=Release ../
+	echo
+	echo from the build directory.
+	echo
+else
+        echo cmake may be reconfigured to generate a Release build by running this with a Debug argument or using the command 
+        echo
+        echo cmake -DCMAKE_BUILD_TYPE=Debug ../
+        echo
+        echo from the build directory.
+	echo
+fi
+
+rm -rf install/
+mkdir install
+
+rm -rf build/
+mkdir build
+cd build
+
+rm -f CMakeCache.txt
+rm -rf CMakeFiles
+
+if [ $MACHINE_ID == "MBP115573" ]
+then
+    export CC=/opt/local/bin/gcc-mp-11
+    export CXX=/opt/local/bin/g++-mp-11
+    export FC=/opt/local/bin/gfortran-mp-11
+
+    cmake ../ \
+	  -DCMAKE_BUILD_TYPE:String=$BUILD_TYPE                             \
+	  -DCMAKE_INSTALL_PREFIX=/Users/21b/Desktop/KORC/FIO/install \
+	  -DCMAKE_Fortran_FLAGS="-O3 -msse2 -DHDF5_DOUBLE_PRESICION -fopenmp -malign-double -fconvert='big-endian'" \
+          -DCMAKE_C_FLAGS="-O3 -msse2 -fopenmp -malign-double"  \
+          -DCMAKE_CXX_FLAGS="-O3 -msse2 -fopenmp -malign-double" \
+	  -DCMAKE_Fortran_FLAGS_DEBUG="-g -ffpe-trap=invalid,zero,overflow -fimplicit-none -fbacktrace  -fsanitize=address"   \
+          -DCMAKE_C_FLAGS_DEBUG="-g -g3" \
+    	  -DCMAKE_CXX_FLAGS_DEBUG="-g -g3" \
+	  -DCMAKE_HDF5_DIR=/opt/local/bin \
+	  -DHDF5_DIR=/opt/local \
+
+
+elif [ $MACHINE_ID == "cori01"   ] || \
+     [ $MACHINE_ID == "cori02"   ] || \
+     [ $MACHINE_ID == "cori03"   ] || \
+     [ $MACHINE_ID == "cori04"   ] || \
+     [ $MACHINE_ID == "cori05"   ] || \
+     [ $MACHINE_ID == "cori06"   ] || \
+     [ $MACHINE_ID == "cori07"   ] || \
+     [ $MACHINE_ID == "cori08"   ] || \
+     [ $MACHINE_ID == "cori09"   ] || \
+     [ $MACHINE_ID == "cori10"   ] || \
+     [ $MACHINE_ID == "cori11"   ] || \
+     [ $MACHINE_ID == "cori12"   ]
+then
+
+    module load cmake
+    module load cray-hdf5
+    module unload darshan/3.1.4
+    
+    cmake ../ -DCMAKE_BUILD_TYPE:String=$BUILD_TYPE                                          \
+	  -DCMAKE_INSTALL_PREFIX=/global/cfs/cdirs/m3236/build_M3DC1/KORC/FIO/install \
+	  -DCMAKE_PREFIX_PATH=$MPICH_DIR \
+	  -DCMAKE_FORTRAN_FLAGS="convert big_endian -O3 -axMIC-AVX512,AVX -DHDF5_DOUBLE_PRESICION -vec-threshold0 -simd -qopenmp -align array64byte -assume contiguous_assumed_shape -vecabi=cmdtarget" \
+	  -DCMAKE_C_FLAGS="-O3 -axMIC-AVX512,AVX -vec-threshold0 -simd -qopenmp" \
+	  -DCCMAKE_CXX_FLAGS="-O3 -std=c++11 -axMIC-AVX512,AVX -vec-threshold0 -simd -qopenmp" \
+	  -DCMAKE_FORTRAN_FLAGS="-convert big_endian -g -traceback -check all -Bdynamic -debug inline-debug-info -qopt-report=5 -qopt-report-phase=vec -qoverride-limits -simd -qopenmp" \
+	  -DCMAKE_C_FLAGS="-g -traceback -Bdynamic -qopt-report=5 -qopt-report-phase=vec -simd -qopenmp" \
+	  -DCCMAKE_CXX_FLAGS="-g -traceback -Bdynamic -qopt-report=5 -qopt-report-phase=vec -simd -qopenmp"
+fi
+
+echo To build the code run the following commands.
+echo
+echo cd build
+echo make
+echo
+echo The build libraies can be located in 
+echo
+echo build/fusion_io
+echo build/m3dc1_lib
+echo
+echo To install the built libraries and headers, run 
+echo
+echo make install
+echo
+echo By default, cmake will install to /usr/local. You will need to prefix this sudo command to use this location.
+echo If you perfer a different install location set the cmake variable.
+echo
+echo -DCMAKE_INSTALL_PREFIX=/path/to/install/location.
+echo
